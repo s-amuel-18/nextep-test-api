@@ -1,0 +1,690 @@
+openapi: '3.0.0'
+
+info:
+  title: Bookstore Inventory API
+  version: '1.0.0'
+  description: |
+    API REST para gestión de inventario de librerías con validación de precios
+    en tiempo real mediante integración con la API de tasas de cambio de exchangerate-api.com.
+
+    ## Reglas de negocio
+    - `cost_usd` debe ser mayor a 0
+    - `stock_quantity` no puede ser negativo
+    - `isbn` debe ser un ISBN-10 o ISBN-13 válido (acepta guiones)
+    - `supplier_country` debe ser un código ISO 3166-1 alpha-2 de 2 caracteres
+    - `selling_price_local` se calcula exclusivamente via `POST /books/:id/calculate-price`
+
+servers:
+  - url: http://localhost:3000
+    description: Servidor de desarrollo
+
+tags:
+  - name: Books
+    description: Gestión del inventario de libros
+  - name: Pricing
+    description: Cálculo de precios con tasa de cambio en tiempo real
+
+# ─────────────────────────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────────────────────────
+components:
+  schemas:
+
+    Book:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: El Quijote
+        author:
+          type: string
+          example: Miguel de Cervantes
+        isbn:
+          type: string
+          example: '9788437604947'
+        costUsd:
+          type: number
+          format: double
+          example: 15.99
+        sellingPriceLocal:
+          type: number
+          format: double
+          nullable: true
+          example: 19.03
+          description: Calculado por POST /books/:id/calculate-price. Null hasta ese momento.
+        stockQuantity:
+          type: integer
+          example: 25
+        category:
+          type: string
+          example: Literatura Clásica
+        supplierCountry:
+          type: string
+          minLength: 2
+          maxLength: 2
+          example: ES
+          description: Código ISO 3166-1 alpha-2
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-03-09T21:00:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-03-09T21:00:00.000Z'
+
+    CreateBookRequest:
+      type: object
+      required:
+        - title
+        - author
+        - isbn
+        - cost_usd
+        - stock_quantity
+        - category
+        - supplier_country
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          example: El Quijote
+        author:
+          type: string
+          minLength: 1
+          maxLength: 500
+          example: Miguel de Cervantes
+        isbn:
+          type: string
+          example: '9788437604947'
+          description: ISBN-10 o ISBN-13 válido. Acepta formato con o sin guiones.
+        cost_usd:
+          type: number
+          format: double
+          minimum: 0.01
+          example: 15.99
+          description: Costo de importación en dólares. Debe ser mayor a 0.
+        stock_quantity:
+          type: integer
+          minimum: 0
+          example: 25
+          description: Unidades en inventario. No puede ser negativo.
+        category:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Literatura Clásica
+        supplier_country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          example: ES
+          description: Código ISO 3166-1 alpha-2 (ES, MX, US, etc.)
+
+    UpdateBookRequest:
+      type: object
+      minProperties: 1
+      description: Al menos un campo debe enviarse.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          example: El Quijote — Edición Revisada
+        author:
+          type: string
+          minLength: 1
+          maxLength: 500
+          example: Miguel de Cervantes
+        isbn:
+          type: string
+          example: '9780306406157'
+        cost_usd:
+          type: number
+          format: double
+          minimum: 0.01
+          example: 17.50
+        stock_quantity:
+          type: integer
+          minimum: 0
+          example: 30
+        category:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Clásicos Españoles
+        supplier_country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          example: ES
+
+    PriceCalculationResult:
+      type: object
+      properties:
+        book_id:
+          type: integer
+          example: 1
+        cost_usd:
+          type: number
+          format: double
+          example: 15.99
+        exchange_rate:
+          type: number
+          format: double
+          example: 0.85
+        cost_local:
+          type: number
+          format: double
+          example: 13.59
+          description: cost_usd × exchange_rate
+        margin_percentage:
+          type: integer
+          example: 40
+        selling_price_local:
+          type: number
+          format: double
+          example: 19.03
+          description: cost_local × 1.40
+        currency:
+          type: string
+          example: EUR
+          description: Moneda local determinada por el supplier_country del libro
+        used_fallback_rate:
+          type: boolean
+          example: false
+          description: True si la API externa falló y se usó la tasa por defecto
+        calculation_timestamp:
+          type: string
+          format: date-time
+          example: '2026-03-09T21:00:00.000Z'
+
+    BookListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Book'
+        total:
+          type: integer
+          example: 42
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+
+    BookSearchResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Book'
+        total:
+          type: integer
+          example: 3
+
+    ValidationError:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+          example: error
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: Validation failed
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: isbn
+              message:
+                type: string
+                example: Invalid ISBN format. Must be ISBN-10 or ISBN-13
+
+    AppError:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+          example: error
+        statusCode:
+          type: integer
+          example: 404
+        message:
+          type: string
+          example: Book with id 99 not found
+
+  parameters:
+    BookId:
+      name: id
+      in: path
+      required: true
+      description: ID entero positivo del libro
+      schema:
+        type: integer
+        minimum: 1
+      example: 1
+
+    PageParam:
+      name: page
+      in: query
+      description: Número de página (empieza en 1)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      example: 1
+
+    LimitParam:
+      name: limit
+      in: query
+      description: Resultados por página (máximo 100)
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+      example: 10
+
+  responses:
+    ValidationError:
+      description: Error de validación en el cuerpo, parámetros o query
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+          example:
+            status: error
+            statusCode: 400
+            message: Validation failed
+            errors:
+              - field: isbn
+                message: Invalid ISBN format. Must be ISBN-10 or ISBN-13
+              - field: cost_usd
+                message: cost_usd must be greater than 0
+
+    NotFound:
+      description: El recurso no existe
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppError'
+          example:
+            status: error
+            statusCode: 404
+            message: Book with id 99 not found
+
+    Conflict:
+      description: Conflicto de unicidad (ISBN duplicado)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppError'
+          example:
+            status: error
+            statusCode: 409
+            message: A book with ISBN "9788437604947" already exists
+
+    InternalError:
+      description: Error interno del servidor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppError'
+          example:
+            status: error
+            statusCode: 500
+            message: An unexpected error occurred. Please try again later.
+
+# ─────────────────────────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────────────────────────
+paths:
+
+  # ── GET /books/search ──────────────────────────────────────────
+  /books/search:
+    get:
+      tags: [Books]
+      summary: Buscar libros por categoría
+      description: |
+        Filtra libros por categoría de forma case-insensitive.
+        Devuelve todos los libros cuya categoría coincida exactamente
+        (ignorando mayúsculas/minúsculas).
+      parameters:
+        - name: category
+          in: query
+          required: true
+          description: Categoría a buscar (case-insensitive)
+          schema:
+            type: string
+            minLength: 1
+          example: Literatura Clásica
+      responses:
+        '200':
+          description: Lista de libros encontrados (puede ser vacía)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookSearchResponse'
+              examples:
+                con_resultados:
+                  summary: Con resultados
+                  value:
+                    data:
+                      - id: 1
+                        title: El Quijote
+                        author: Miguel de Cervantes
+                        isbn: '9788437604947'
+                        costUsd: 15.99
+                        sellingPriceLocal: 19.03
+                        stockQuantity: 25
+                        category: Literatura Clásica
+                        supplierCountry: ES
+                        createdAt: '2026-03-09T21:00:00.000Z'
+                        updatedAt: '2026-03-09T21:00:00.000Z'
+                    total: 1
+                sin_resultados:
+                  summary: Sin resultados
+                  value:
+                    data: []
+                    total: 0
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── GET /books/low-stock ───────────────────────────────────────
+  /books/low-stock:
+    get:
+      tags: [Books]
+      summary: Libros con stock bajo
+      description: |
+        Retorna libros cuyo `stock_quantity` sea menor o igual al umbral indicado.
+        Resultados ordenados por `stock_quantity` ascendente.
+        El umbral por defecto es 10.
+      parameters:
+        - name: threshold
+          in: query
+          required: false
+          description: Umbral de stock (default 10). Retorna libros con stock ≤ threshold.
+          schema:
+            type: integer
+            minimum: 0
+            default: 10
+          example: 5
+      responses:
+        '200':
+          description: Lista de libros con stock bajo (puede ser vacía)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookSearchResponse'
+              example:
+                data:
+                  - id: 3
+                    title: El Principito
+                    author: Antoine de Saint-Exupéry
+                    isbn: '9782070612758'
+                    costUsd: 7.50
+                    sellingPriceLocal: null
+                    stockQuantity: 2
+                    category: Literatura Infantil
+                    supplierCountry: FR
+                    createdAt: '2026-03-09T21:00:00.000Z'
+                    updatedAt: '2026-03-09T21:00:00.000Z'
+                total: 1
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── /books ─────────────────────────────────────────────────────
+  /books:
+    get:
+      tags: [Books]
+      summary: Listar todos los libros
+      description: Retorna la lista paginada de todos los libros ordenados por fecha de creación descendente.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Lista paginada de libros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookListResponse'
+              example:
+                data:
+                  - id: 2
+                    title: Cien años de soledad
+                    author: Gabriel García Márquez
+                    isbn: '9780060883287'
+                    costUsd: 12.50
+                    sellingPriceLocal: null
+                    stockQuantity: 15
+                    category: Literatura Latinoamericana
+                    supplierCountry: CO
+                    createdAt: '2026-03-09T21:00:00.000Z'
+                    updatedAt: '2026-03-09T21:00:00.000Z'
+                  - id: 1
+                    title: El Quijote
+                    author: Miguel de Cervantes
+                    isbn: '9788437604947'
+                    costUsd: 15.99
+                    sellingPriceLocal: 19.03
+                    stockQuantity: 25
+                    category: Literatura Clásica
+                    supplierCountry: ES
+                    createdAt: '2026-03-09T20:00:00.000Z'
+                    updatedAt: '2026-03-09T21:00:00.000Z'
+                total: 10
+                page: 1
+                limit: 10
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags: [Books]
+      summary: Crear un libro
+      description: |
+        Crea un nuevo libro en el inventario.
+
+        **Campos ignorados:** `selling_price_local` nunca se acepta en el body —
+        siempre inicia en `null` y se calcula via `POST /books/:id/calculate-price`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookRequest'
+            example:
+              title: El Quijote
+              author: Miguel de Cervantes
+              isbn: '9788437604947'
+              cost_usd: 15.99
+              stock_quantity: 25
+              category: Literatura Clásica
+              supplier_country: ES
+      responses:
+        '201':
+          description: Libro creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+              example:
+                id: 1
+                title: El Quijote
+                author: Miguel de Cervantes
+                isbn: '9788437604947'
+                costUsd: 15.99
+                sellingPriceLocal: null
+                stockQuantity: 25
+                category: Literatura Clásica
+                supplierCountry: ES
+                createdAt: '2026-03-09T21:00:00.000Z'
+                updatedAt: '2026-03-09T21:00:00.000Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── /books/:id ─────────────────────────────────────────────────
+  /books/{id}:
+    parameters:
+      - $ref: '#/components/parameters/BookId'
+
+    get:
+      tags: [Books]
+      summary: Obtener un libro por ID
+      responses:
+        '200':
+          description: Libro encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags: [Books]
+      summary: Actualizar un libro
+      description: |
+        Actualización parcial — solo se modifican los campos enviados.
+        El body debe contener **al menos un campo**.
+
+        Si se envía un `isbn` diferente al actual, se verifica que no exista
+        en otro libro antes de actualizar.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBookRequest'
+            examples:
+              actualizar_stock:
+                summary: Actualizar solo el stock
+                value:
+                  stock_quantity: 30
+              actualizar_precio_y_stock:
+                summary: Actualizar precio y stock
+                value:
+                  cost_usd: 17.50
+                  stock_quantity: 30
+      responses:
+        '200':
+          description: Libro actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      tags: [Books]
+      summary: Eliminar un libro
+      responses:
+        '204':
+          description: Libro eliminado exitosamente (sin body)
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── /books/:id/calculate-price ─────────────────────────────────
+  /books/{id}/calculate-price:
+    post:
+      tags: [Pricing]
+      summary: Calcular precio de venta con tasa de cambio actual
+      description: |
+        Calcula el precio de venta sugerido del libro aplicando la tasa de cambio
+        USD → moneda local y un margen de ganancia del **40%**.
+
+        **Flujo:**
+        1. Obtiene el libro por ID
+        2. Determina la moneda local a partir del `supplier_country` del libro
+        3. Consulta `https://api.exchangerate-api.com/v4/latest/USD`
+        4. Calcula: `cost_local = cost_usd × exchange_rate`
+        5. Aplica margen: `selling_price_local = cost_local × 1.40`
+        6. Persiste `selling_price_local` en la base de datos
+        7. Retorna el detalle completo del cálculo
+
+        **Fallback:** Si la API externa no responde (timeout, error de red, error HTTP),
+        se usa la tasa configurada en `DEFAULT_EXCHANGE_RATE`. **Nunca retorna error 5xx
+        por causa de la API externa.**
+
+        **Mapeo de monedas por país:** ES/DE/FR/IT/PT → EUR · MX → MXN · US → USD ·
+        GB → GBP · CO → COP · AR → ARS · CL → CLP · PE → PEN · JP → JPY · BR → BRL.
+        Países sin mapeo usan `DEFAULT_CURRENCY`.
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      responses:
+        '200':
+          description: Precio calculado y persistido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceCalculationResult'
+              examples:
+                tasa_real:
+                  summary: Con tasa de cambio real
+                  value:
+                    book_id: 1
+                    cost_usd: 15.99
+                    exchange_rate: 0.85
+                    cost_local: 13.59
+                    margin_percentage: 40
+                    selling_price_local: 19.03
+                    currency: EUR
+                    used_fallback_rate: false
+                    calculation_timestamp: '2026-03-09T21:00:00.000Z'
+                tasa_fallback:
+                  summary: Con tasa de fallback (API externa falló)
+                  value:
+                    book_id: 1
+                    cost_usd: 15.99
+                    exchange_rate: 1.0
+                    cost_local: 15.99
+                    margin_percentage: 40
+                    selling_price_local: 22.39
+                    currency: EUR
+                    used_fallback_rate: true
+                    calculation_timestamp: '2026-03-09T21:00:00.000Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'

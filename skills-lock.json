@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "code-review-quality": {
+      "source": "proffesor-for-testing/agentic-qe",
+      "sourceType": "github",
+      "computedHash": "70ff4a1d6320628a87c3a0d60e63b2bdc0e063127e00f666380f4eff2b7440a1"
+    },
+    "compatibility-testing": {
+      "source": "proffesor-for-testing/agentic-qe",
+      "sourceType": "github",
+      "computedHash": "0946a7c0e7828ae62e31133dbef28f47b2f73ea03409b2b0e19eb67dcd81f163"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "computedHash": "25872a21881a950edc3db1f3329664d60405d539660ce05b3265db2de06a7dfd"
+    }
+  }
+}

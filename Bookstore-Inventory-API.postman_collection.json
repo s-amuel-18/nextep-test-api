@@ -1,0 +1,716 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "Bookstore Inventory API",
+    "description": "Documentacion completa de la API REST de inventario de libreria.\n\nBase URL: {{baseUrl}}\n\n## Endpoints\n- Health check\n- CRUD de libros\n- Busqueda por categoria\n- Stock bajo\n- Calculo de precio con tasa de cambio\n\n## Formato de errores\nTodos los errores siguen la forma:\n```json\n{\n  \"status\": \"error\",\n  \"statusCode\": 400,\n  \"message\": \"...\",\n  \"errors\": [ { \"field\": \"...\", \"message\": \"...\" } ]\n}\n```\n`errors` solo aparece en errores de validacion (400).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "bookId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Verifica que el servidor este en linea."
+          },
+          "response": [
+            {
+              "name": "OK - Servidor en linea",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/health",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["health"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"ok\",\n  \"timestamp\": \"2026-03-10T12:00:00.000Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Books — CRUD",
+      "item": [
+        {
+          "name": "Crear libro",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"El Quijote\",\n  \"author\": \"Miguel de Cervantes\",\n  \"isbn\": \"9788437604947\",\n  \"cost_usd\": 15.99,\n  \"stock_quantity\": 25,\n  \"category\": \"Literatura Clasica\",\n  \"supplier_country\": \"ES\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/books",
+              "host": ["{{baseUrl}}"],
+              "path": ["books"]
+            },
+            "description": "Crea un nuevo libro en el inventario.\n\n**Campos requeridos:**\n- `title` — string (1-500 chars)\n- `author` — string (1-500 chars)\n- `isbn` — ISBN-10 o ISBN-13 valido\n- `cost_usd` — numero positivo\n- `stock_quantity` — entero >= 0\n- `category` — string (1-255 chars)\n- `supplier_country` — codigo ISO 2 letras (ej: ES, US, MX)"
+          },
+          "response": [
+            {
+              "name": "201 - Libro creado exitosamente",
+              "status": "Created",
+              "code": 201,
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"El Quijote\",\n  \"author\": \"Miguel de Cervantes\",\n  \"isbn\": \"9788437604947\",\n  \"cost_usd\": 15.99,\n  \"stock_quantity\": 25,\n  \"category\": \"Literatura Clasica\",\n  \"supplier_country\": \"ES\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/books",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": 1,\n  \"title\": \"El Quijote\",\n  \"author\": \"Miguel de Cervantes\",\n  \"isbn\": \"9788437604947\",\n  \"costUsd\": 15.99,\n  \"sellingPriceLocal\": null,\n  \"stockQuantity\": 25,\n  \"category\": \"Literatura Clasica\",\n  \"supplierCountry\": \"ES\",\n  \"createdAt\": \"2026-03-10T12:00:00.000Z\",\n  \"updatedAt\": \"2026-03-10T12:00:00.000Z\"\n}"
+            },
+            {
+              "name": "400 - Validacion fallida (campos invalidos)",
+              "status": "Bad Request",
+              "code": 400,
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"\",\n  \"author\": \"Miguel de Cervantes\",\n  \"isbn\": \"1234567890\",\n  \"cost_usd\": -5,\n  \"stock_quantity\": -1,\n  \"category\": \"Literatura Clasica\",\n  \"supplier_country\": \"ESPAÑA\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/books",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"error\",\n  \"statusCode\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"title\", \"message\": \"String must contain at least 1 character(s)\" },\n    { \"field\": \"isbn\", \"message\": \"ISBN must be a valid ISBN-10 or ISBN-13\" },\n    { \"field\": \"cost_usd\", \"message\": \"Number must be greater than 0\" },\n    { \"field\": \"stock_quantity\", \"message\": \"Number must be greater than or equal to 0\" },\n    { \"field\": \"supplier_country\", \"message\": \"String must contain at most 2 character(s)\" }\n  ]\n}"
+            },
+            {
+              "name": "400 - Validacion fallida (campo requerido ausente)",
+              "status": "Bad Request",
+              "code": 400,
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"author\": \"Miguel de Cervantes\",\n  \"isbn\": \"9788437604947\",\n  \"cost_usd\": 15.99,\n  \"stock_quantity\": 25,\n  \"category\": \"Literatura Clasica\",\n  \"supplier_country\": \"ES\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/books",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"error\",\n  \"statusCode\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"title\", \"message\": \"Required\" }\n  ]\n}"
+            },
+            {
+              "name": "409 - ISBN ya existe",
+              "status": "Conflict",
+              "code": 409,
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"El Quijote\",\n  \"author\": \"Miguel de Cervantes\",\n  \"isbn\": \"9788437604947\",\n  \"cost_usd\": 15.99,\n  \"stock_quantity\": 25,\n  \"category\": \"Literatura Clasica\",\n  \"supplier_country\": \"ES\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/books",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"error\",\n  \"statusCode\": 409,\n  \"message\": \"A book with ISBN 9788437604947 already exists\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Listar libros",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/books?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["books"],
+              "query": [
+                { "key": "page", "value": "1", "description": "Pagina (default: 1)" },
+                { "key": "limit", "value": "10", "description": "Resultados por pagina (1-100, default: 10)" }
+              ]
+            },
+            "description": "Retorna todos los libros con paginacion.\n\n**Query params opcionales:**\n- `page` — entero >= 1 (default: 1)\n- `limit` — entero 1-100 (default: 10)"
+          },
+          "response": [
+            {
+              "name": "200 - Lista paginada exitosa",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books?page=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "10" }
+                  ]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"title\": \"El Quijote\",\n      \"author\": \"Miguel de Cervantes\",\n      \"isbn\": \"9788437604947\",\n      \"costUsd\": 15.99,\n      \"sellingPriceLocal\": 19.03,\n      \"stockQuantity\": 25,\n      \"category\": \"Literatura Clasica\",\n      \"supplierCountry\": \"ES\",\n      \"createdAt\": \"2026-03-10T12:00:00.000Z\",\n      \"updatedAt\": \"2026-03-10T12:00:00.000Z\"\n    },\n    {\n      \"id\": 2,\n      \"title\": \"Cien anos de soledad\",\n      \"author\": \"Gabriel Garcia Marquez\",\n      \"isbn\": \"9780060883287\",\n      \"costUsd\": 12.50,\n      \"sellingPriceLocal\": null,\n      \"stockQuantity\": 8,\n      \"category\": \"Novela\",\n      \"supplierCountry\": \"CO\",\n      \"createdAt\": \"2026-03-10T10:00:00.000Z\",\n      \"updatedAt\": \"2026-03-10T10:00:00.000Z\"\n    }\n  ],\n  \"total\": 2,\n  \"page\": 1,\n  \"limit\": 10\n}"
+            },
+            {
+              "name": "200 - Lista vacia",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"data\": [],\n  \"total\": 0,\n  \"page\": 1,\n  \"limit\": 10\n}"
+            },
+            {
+              "name": "400 - Parametros de paginacion invalidos",
+              "status": "Bad Request",
+              "code": 400,
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books?page=0&limit=200",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books"],
+                  "query": [
+                    { "key": "page", "value": "0" },
+                    { "key": "limit", "value": "200" }
+                  ]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"error\",\n  \"statusCode\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"page\", \"message\": \"Number must be greater than or equal to 1\" },\n    { \"field\": \"limit\", \"message\": \"Number must be less than or equal to 100\" }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Obtener libro por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/books/{{bookId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{bookId}}"]
+            },
+            "description": "Obtiene un libro especifico por su ID numerico."
+          },
+          "response": [
+            {
+              "name": "200 - Libro encontrado",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "1"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": 1,\n  \"title\": \"El Quijote\",\n  \"author\": \"Miguel de Cervantes\",\n  \"isbn\": \"9788437604947\",\n  \"costUsd\": 15.99,\n  \"sellingPriceLocal\": 19.03,\n  \"stockQuantity\": 25,\n  \"category\": \"Literatura Clasica\",\n  \"supplierCountry\": \"ES\",\n  \"createdAt\": \"2026-03-10T12:00:00.000Z\",\n  \"updatedAt\": \"2026-03-10T12:00:00.000Z\"\n}"
+            },
+            {
+              "name": "404 - Libro no encontrado",
+              "status": "Not Found",
+              "code": 404,
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/999",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "999"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"error\",\n  \"statusCode\": 404,\n  \"message\": \"Book with id 999 not found\"\n}"
+            },
+            {
+              "name": "400 - ID no es un numero",
+              "status": "Bad Request",
+              "code": 400,
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/abc",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "abc"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"error\",\n  \"statusCode\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"id\", \"message\": \"Expected number, received nan\" }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Actualizar libro",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stock_quantity\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/books/{{bookId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{bookId}}"]
+            },
+            "description": "Actualiza uno o mas campos de un libro existente.\n\nTodos los campos son **opcionales**, pero se debe enviar al menos uno.\n\n**Campos actualizables:**\n- `title`, `author`, `isbn`, `cost_usd`, `stock_quantity`, `category`, `supplier_country`"
+          },
+          "response": [
+            {
+              "name": "200 - Libro actualizado exitosamente",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"stock_quantity\": 50\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/books/1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "1"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": 1,\n  \"title\": \"El Quijote\",\n  \"author\": \"Miguel de Cervantes\",\n  \"isbn\": \"9788437604947\",\n  \"costUsd\": 15.99,\n  \"sellingPriceLocal\": 19.03,\n  \"stockQuantity\": 50,\n  \"category\": \"Literatura Clasica\",\n  \"supplierCountry\": \"ES\",\n  \"createdAt\": \"2026-03-10T12:00:00.000Z\",\n  \"updatedAt\": \"2026-03-10T13:00:00.000Z\"\n}"
+            },
+            {
+              "name": "404 - Libro no encontrado",
+              "status": "Not Found",
+              "code": 404,
+              "originalRequest": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"stock_quantity\": 50\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/books/999",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "999"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"error\",\n  \"statusCode\": 404,\n  \"message\": \"Book with id 999 not found\"\n}"
+            },
+            {
+              "name": "400 - Body vacio (ningun campo enviado)",
+              "status": "Bad Request",
+              "code": 400,
+              "originalRequest": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/books/1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "1"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"error\",\n  \"statusCode\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"_root\", \"message\": \"At least one field must be provided\" }\n  ]\n}"
+            },
+            {
+              "name": "400 - Validacion fallida (valor invalido)",
+              "status": "Bad Request",
+              "code": 400,
+              "originalRequest": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cost_usd\": -10,\n  \"isbn\": \"isbn-invalido\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/books/1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "1"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"error\",\n  \"statusCode\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"cost_usd\", \"message\": \"Number must be greater than 0\" },\n    { \"field\": \"isbn\", \"message\": \"ISBN must be a valid ISBN-10 or ISBN-13\" }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Eliminar libro",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/books/{{bookId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{bookId}}"]
+            },
+            "description": "Elimina un libro del inventario. Retorna 204 sin body en caso exitoso."
+          },
+          "response": [
+            {
+              "name": "204 - Libro eliminado exitosamente",
+              "status": "No Content",
+              "code": 204,
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "1"]
+                }
+              },
+              "_postman_previewlanguage": "text",
+              "header": [],
+              "body": ""
+            },
+            {
+              "name": "404 - Libro no encontrado",
+              "status": "Not Found",
+              "code": 404,
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/999",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "999"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"error\",\n  \"statusCode\": 404,\n  \"message\": \"Book with id 999 not found\"\n}"
+            },
+            {
+              "name": "400 - ID invalido",
+              "status": "Bad Request",
+              "code": 400,
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/abc",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "abc"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"error\",\n  \"statusCode\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"id\", \"message\": \"Expected number, received nan\" }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Books — Busqueda y filtros",
+      "item": [
+        {
+          "name": "Buscar por categoria",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/books/search?category=Literatura Clasica",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "search"],
+              "query": [
+                { "key": "category", "value": "Literatura Clasica", "description": "Categoria a buscar (requerido)" }
+              ]
+            },
+            "description": "Busca libros que coincidan exactamente con la categoria indicada.\n\n**Query param requerido:**\n- `category` — string no vacio"
+          },
+          "response": [
+            {
+              "name": "200 - Libros encontrados",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/search?category=Literatura Clasica",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "search"],
+                  "query": [{ "key": "category", "value": "Literatura Clasica" }]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"data\": [\n    {\n      \"id\": 1,\n      \"title\": \"El Quijote\",\n      \"author\": \"Miguel de Cervantes\",\n      \"isbn\": \"9788437604947\",\n      \"costUsd\": 15.99,\n      \"sellingPriceLocal\": 19.03,\n      \"stockQuantity\": 25,\n      \"category\": \"Literatura Clasica\",\n      \"supplierCountry\": \"ES\",\n      \"createdAt\": \"2026-03-10T12:00:00.000Z\",\n      \"updatedAt\": \"2026-03-10T12:00:00.000Z\"\n    }\n  ],\n  \"total\": 1\n}"
+            },
+            {
+              "name": "200 - Sin resultados para esa categoria",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/search?category=Ciencia Ficcion",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "search"],
+                  "query": [{ "key": "category", "value": "Ciencia Ficcion" }]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"data\": [],\n  \"total\": 0\n}"
+            },
+            {
+              "name": "400 - Parametro category ausente",
+              "status": "Bad Request",
+              "code": 400,
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/search",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "search"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"error\",\n  \"statusCode\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"category\", \"message\": \"Required\" }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Libros con bajo stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/books/low-stock?threshold=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "low-stock"],
+              "query": [
+                { "key": "threshold", "value": "10", "description": "Umbral de stock (entero >= 0, default: 10)" }
+              ]
+            },
+            "description": "Retorna libros cuyo stock sea menor o igual al umbral indicado.\n\n**Query param opcional:**\n- `threshold` — entero >= 0 (default: 10)"
+          },
+          "response": [
+            {
+              "name": "200 - Libros con stock bajo encontrados",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/low-stock?threshold=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "low-stock"],
+                  "query": [{ "key": "threshold", "value": "10" }]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"data\": [\n    {\n      \"id\": 2,\n      \"title\": \"Cien anos de soledad\",\n      \"author\": \"Gabriel Garcia Marquez\",\n      \"isbn\": \"9780060883287\",\n      \"costUsd\": 12.50,\n      \"sellingPriceLocal\": null,\n      \"stockQuantity\": 8,\n      \"category\": \"Novela\",\n      \"supplierCountry\": \"CO\",\n      \"createdAt\": \"2026-03-10T10:00:00.000Z\",\n      \"updatedAt\": \"2026-03-10T10:00:00.000Z\"\n    }\n  ],\n  \"total\": 1\n}"
+            },
+            {
+              "name": "200 - Sin libros bajo el umbral",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/low-stock?threshold=2",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "low-stock"],
+                  "query": [{ "key": "threshold", "value": "2" }]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"data\": [],\n  \"total\": 0\n}"
+            },
+            {
+              "name": "400 - Threshold negativo",
+              "status": "Bad Request",
+              "code": 400,
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/low-stock?threshold=-1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "low-stock"],
+                  "query": [{ "key": "threshold", "value": "-1" }]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"error\",\n  \"statusCode\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"threshold\", \"message\": \"Number must be greater than or equal to 0\" }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Books — Calculo de precio",
+      "item": [
+        {
+          "name": "Calcular precio de venta",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/books/{{bookId}}/calculate-price",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{bookId}}", "calculate-price"]
+            },
+            "description": "Calcula el precio de venta local del libro aplicando la tasa de cambio actual para el pais proveedor y un margen del 40%.\n\nLa formula es:\n```\ncost_local = cost_usd * exchange_rate\nselling_price_local = cost_local * 1.40\n```\n\nSi la API de tasa de cambio externa falla, se usa el valor de `DEFAULT_EXCHANGE_RATE` (configurado en .env) y se reporta `used_fallback_rate: true`.\n\nEl precio calculado queda guardado en el campo `sellingPriceLocal` del libro."
+          },
+          "response": [
+            {
+              "name": "200 - Precio calculado con tasa real",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/1/calculate-price",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "1", "calculate-price"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"book_id\": 1,\n  \"cost_usd\": 15.99,\n  \"exchange_rate\": 0.85,\n  \"cost_local\": 13.59,\n  \"margin_percentage\": 40,\n  \"selling_price_local\": 19.03,\n  \"currency\": \"EUR\",\n  \"used_fallback_rate\": false,\n  \"calculation_timestamp\": \"2026-03-10T12:00:00.000Z\"\n}"
+            },
+            {
+              "name": "200 - Precio calculado con tasa de fallback (API externa caida)",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/1/calculate-price",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "1", "calculate-price"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"book_id\": 1,\n  \"cost_usd\": 15.99,\n  \"exchange_rate\": 1.0,\n  \"cost_local\": 15.99,\n  \"margin_percentage\": 40,\n  \"selling_price_local\": 22.39,\n  \"currency\": \"USD\",\n  \"used_fallback_rate\": true,\n  \"calculation_timestamp\": \"2026-03-10T12:00:00.000Z\"\n}"
+            },
+            {
+              "name": "404 - Libro no encontrado",
+              "status": "Not Found",
+              "code": 404,
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/999/calculate-price",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "999", "calculate-price"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"error\",\n  \"statusCode\": 404,\n  \"message\": \"Book with id 999 not found\"\n}"
+            },
+            {
+              "name": "400 - ID invalido",
+              "status": "Bad Request",
+              "code": 400,
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/books/abc/calculate-price",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["books", "abc", "calculate-price"]
+                }
+              },
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"error\",\n  \"statusCode\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"id\", \"message\": \"Expected number, received nan\" }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
