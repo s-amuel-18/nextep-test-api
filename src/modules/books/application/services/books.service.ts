@@ -25,7 +25,6 @@ export class BooksService {
     const book = await this.repository.findById(id);
     if (!book) throw new BookNotFoundError(id);
 
-    // Si se cambia el ISBN, verificar que no esté en uso por otro libro
     if (input.isbn && input.isbn !== book.isbn) {
       const existing = await this.repository.findByIsbn(input.isbn);
       if (existing) throw new DuplicateIsbnError(input.isbn);

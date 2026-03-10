@@ -33,7 +33,6 @@ describe('validateIsbn', () => {
     });
 
     it('should return true for a valid ISBN-10 with X as check digit', () => {
-      // 0+72+0+28+24+10+36+15+14+10 = 209  → 209 % 11 === 0 ✓
       expect(validateIsbn('080442957X')).toBe(true);
     });
 

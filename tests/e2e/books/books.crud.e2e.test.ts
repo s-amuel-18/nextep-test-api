@@ -1,9 +1,3 @@
-/**
- * E2E Tests — Books CRUD
- * Covers: POST /books, GET /books, GET /books/:id, PUT /books/:id, DELETE /books/:id
- */
-
-// ── Mocks (must be declared before any source import) ─────────────────────────
 const mockDb = {
   book: {
     findMany: jest.fn(),
@@ -36,20 +30,17 @@ jest.mock('../../../src/config/env', () => ({
   },
 }));
 
-// ── Imports ───────────────────────────────────────────────────────────────────
 import request from 'supertest';
 import 'express-async-errors';
 import app from '../../../src/app';
 import { mockPrismaBook, validCreateBody } from '../helpers/prisma-book.fixture';
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
 describe('Books CRUD E2E', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockDb.$transaction.mockImplementation((queries: Promise<unknown>[]) => Promise.all(queries));
   });
 
-  // ──────────────────────────────────────────────────────────────────────────
   describe('POST /books — Create book', () => {
     it('should create a book and return 201', async () => {
       mockDb.book.findUnique.mockResolvedValue(null);
@@ -114,7 +105,6 @@ describe('Books CRUD E2E', () => {
     });
   });
 
-  // ──────────────────────────────────────────────────────────────────────────
   describe('GET /books — List books', () => {
     it('should return a paginated list of books with default params', async () => {
       mockDb.book.findMany.mockResolvedValue([mockPrismaBook]);
@@ -152,7 +142,6 @@ describe('Books CRUD E2E', () => {
     });
   });
 
-  // ──────────────────────────────────────────────────────────────────────────
   describe('GET /books/:id — Get book by ID', () => {
     it('should return a book when it exists', async () => {
       mockDb.book.findUnique.mockResolvedValue(mockPrismaBook);
@@ -182,7 +171,6 @@ describe('Books CRUD E2E', () => {
     });
   });
 
-  // ──────────────────────────────────────────────────────────────────────────
   describe('PUT /books/:id — Update book', () => {
     it('should update and return the book', async () => {
       const updatedBook = { ...mockPrismaBook, stockQuantity: 30 };
@@ -210,7 +198,6 @@ describe('Books CRUD E2E', () => {
     });
   });
 
-  // ──────────────────────────────────────────────────────────────────────────
   describe('DELETE /books/:id — Delete book', () => {
     it('should delete the book and return 204', async () => {
       mockDb.book.findUnique.mockResolvedValue(mockPrismaBook);

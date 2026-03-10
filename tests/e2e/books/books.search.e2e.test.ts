@@ -1,9 +1,3 @@
-/**
- * E2E Tests — Books Search & Low Stock
- * Covers: GET /books/search, GET /books/low-stock
- */
-
-// ── Mocks (must be declared before any source import) ─────────────────────────
 const mockDb = {
   book: {
     findMany: jest.fn(),
@@ -36,20 +30,17 @@ jest.mock('../../../src/config/env', () => ({
   },
 }));
 
-// ── Imports ───────────────────────────────────────────────────────────────────
 import request from 'supertest';
 import 'express-async-errors';
 import app from '../../../src/app';
 import { mockPrismaBook } from '../helpers/prisma-book.fixture';
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
 describe('Books Search & Low Stock E2E', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockDb.$transaction.mockImplementation((queries: Promise<unknown>[]) => Promise.all(queries));
   });
 
-  // ──────────────────────────────────────────────────────────────────────────
   describe('GET /books/search — Search by category', () => {
     it('should return books matching the category', async () => {
       mockDb.book.findMany.mockResolvedValue([mockPrismaBook]);
@@ -78,7 +69,6 @@ describe('Books Search & Low Stock E2E', () => {
     });
   });
 
-  // ──────────────────────────────────────────────────────────────────────────
   describe('GET /books/low-stock — Low stock books', () => {
     it('should return books at or below the default threshold (10)', async () => {
       const lowStockBook = { ...mockPrismaBook, stockQuantity: 3 };

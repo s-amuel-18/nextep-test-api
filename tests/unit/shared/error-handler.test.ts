@@ -3,7 +3,6 @@ import { ZodError, z } from 'zod';
 import { errorHandler } from '../../../src/shared/errors/error-handler';
 import { AppError } from '../../../src/shared/errors/app.error';
 
-// Silence the logger during error-handler tests
 jest.mock('../../../src/shared/utils/logger', () => ({
   logger: { error: jest.fn() },
 }));

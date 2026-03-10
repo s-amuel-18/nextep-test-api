@@ -1,7 +1,3 @@
-/**
- * Valida un ISBN-10 o ISBN-13.
- * Elimina guiones y espacios antes de validar.
- */
 export const validateIsbn = (isbn: string): boolean => {
   const cleaned = isbn.replace(/[-\s]/g, '');
 

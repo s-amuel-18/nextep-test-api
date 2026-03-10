@@ -1,4 +1,3 @@
-// Mock env module — must be declared before any source import
 jest.mock('../../../src/config/env', () => ({
   env: {
     DEFAULT_EXCHANGE_RATE: 1.0,
@@ -30,7 +29,6 @@ describe('CalculatePriceService', () => {
 
   describe('execute', () => {
     it('should calculate selling price with 40% margin using real exchange rate', async () => {
-      // Arrange
       const book = makeBook({ costUsd: 10.0, supplierCountry: 'ES' });
       mockRepository.findById.mockResolvedValue(book);
       mockExchangeRate.getRate.mockResolvedValue({
@@ -42,10 +40,8 @@ describe('CalculatePriceService', () => {
         makeBook({ sellingPriceLocal: 11.9, costUsd: 10.0 }),
       );
 
-      // Act
       const result = await service.execute(1);
 
-      // Assert
       expect(result.cost_local).toBe(8.5);
       expect(result.selling_price_local).toBe(11.9);
       expect(result.margin_percentage).toBe(40);
@@ -54,7 +50,6 @@ describe('CalculatePriceService', () => {
     });
 
     it('should use fallback rate when exchange rate API fails', async () => {
-      // Arrange
       const book = makeBook({ costUsd: 15.99, supplierCountry: 'ES' });
       mockRepository.findById.mockResolvedValue(book);
       mockExchangeRate.getRate.mockResolvedValue({
@@ -66,17 +61,14 @@ describe('CalculatePriceService', () => {
         makeBook({ sellingPriceLocal: 22.39, costUsd: 15.99 }),
       );
 
-      // Act
       const result = await service.execute(1);
 
-      // Assert
       expect(result.used_fallback_rate).toBe(true);
       expect(result.exchange_rate).toBe(1.0);
       expect(result.selling_price_local).toBe(22.39);
     });
 
     it('should persist the calculated price to the database', async () => {
-      // Arrange
       const book = makeBook({ costUsd: 10.0, supplierCountry: 'ES' });
       mockRepository.findById.mockResolvedValue(book);
       mockExchangeRate.getRate.mockResolvedValue({
@@ -86,10 +78,8 @@ describe('CalculatePriceService', () => {
       });
       mockRepository.updatePrice.mockResolvedValue(makeBook({ sellingPriceLocal: 11.9 }));
 
-      // Act
       await service.execute(1);
 
-      // Assert
       expect(mockRepository.updatePrice).toHaveBeenCalledWith(1, 11.9);
     });
 
@@ -109,7 +99,6 @@ describe('CalculatePriceService', () => {
     });
 
     it('should use DEFAULT_CURRENCY when supplier_country has no currency mapping', async () => {
-      // Arrange — 'ZZ' is not in the currency map
       const book = makeBook({ supplierCountry: 'ZZ', costUsd: 10.0 });
       mockRepository.findById.mockResolvedValue(book);
       mockExchangeRate.getRate.mockResolvedValue({
@@ -119,10 +108,8 @@ describe('CalculatePriceService', () => {
       });
       mockRepository.updatePrice.mockResolvedValue(makeBook({ sellingPriceLocal: 14.0 }));
 
-      // Act
       const result = await service.execute(1);
 
-      // Assert
       expect(result.currency).toBe('USD');
       expect(mockExchangeRate.getRate).toHaveBeenCalledWith('USD');
     });

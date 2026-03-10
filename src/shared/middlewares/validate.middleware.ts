@@ -9,7 +9,6 @@ export const validate = (schema: ZodSchema, source: 'body' | 'query' | 'params' 
       return next(result.error);
     }
 
-    // Reemplazamos la propiedad original con el valor validado/transformado
     req[source] = result.data as (typeof req)[typeof source];
     next();
   };

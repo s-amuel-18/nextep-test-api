@@ -1,9 +1,3 @@
-/**
- * E2E Tests — Books Calculate Price
- * Covers: POST /books/:id/calculate-price
- */
-
-// ── Mocks (must be declared before any source import) ─────────────────────────
 const mockDb = {
   book: {
     findMany: jest.fn(),
@@ -36,7 +30,6 @@ jest.mock('../../../src/config/env', () => ({
   },
 }));
 
-// ── Imports ───────────────────────────────────────────────────────────────────
 import request from 'supertest';
 import axios from 'axios';
 import 'express-async-errors';
@@ -45,7 +38,6 @@ import { mockPrismaBook } from '../helpers/prisma-book.fixture';
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
 describe('Books Calculate Price E2E', () => {
   beforeEach(() => {
     jest.clearAllMocks();

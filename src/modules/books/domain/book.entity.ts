@@ -12,8 +12,6 @@ export interface Book {
   updatedAt: Date;
 }
 
-// Tipo para crear un libro (sin campos auto-generados)
 export type CreateBookInput = Omit<Book, 'id' | 'sellingPriceLocal' | 'createdAt' | 'updatedAt'>;
 
-// Tipo para actualizar (todos los campos opcionales excepto id)
 export type UpdateBookInput = Partial<CreateBookInput>;

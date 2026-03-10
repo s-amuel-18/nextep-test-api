@@ -16,7 +16,6 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction,
 ): void => {
-  // ── 1. ZodError — errores de validación ──────────────────────────
   if (err instanceof ZodError) {
     const errors = err.errors.map((e) => ({
       field: e.path.join('.'),
@@ -32,7 +31,6 @@ export const errorHandler = (
     return;
   }
 
-  // ── 2. AppError operacional (errores de dominio esperados) ────────
   if (err instanceof AppError && err.isOperational) {
     res.status(err.statusCode).json({
       status: 'error',
@@ -42,7 +40,6 @@ export const errorHandler = (
     return;
   }
 
-  // ── 3. Errores inesperados / bugs de programador ──────────────────
   logger.error({ err }, 'Unexpected error occurred');
 
   const isDev = process.env.NODE_ENV === 'development';

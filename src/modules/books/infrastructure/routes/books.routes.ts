@@ -20,7 +20,6 @@ export const createBooksRouter = (
 
   const validId = validate(IdParamDto, 'params');
 
-  // ── Rutas estáticas ───────────────────────
   router.get('/search', validate(SearchBookQueryDto, 'query'), booksController.search);
   router.get(
     '/low-stock',
@@ -28,14 +27,12 @@ export const createBooksRouter = (
     asHandler(booksController.lowStock),
   );
 
-  // ── CRUD ───────────────────────────────────────────────────────────
   router.get('/', validate(GetAllBooksQueryDto, 'query'), asHandler(booksController.getAll));
   router.get('/:id', validId, asHandler(booksController.getById));
   router.post('/', validate(CreateBookDto, 'body'), booksController.create);
   router.put('/:id', validId, validate(UpdateBookDto, 'body'), asHandler(booksController.update));
   router.delete('/:id', validId, asHandler(booksController.delete));
 
-  // ── Integración ────────────────────────────────────────────────────
   router.post('/:id/calculate-price', validId, asHandler(calculatePriceController.calculate));
 
   return router;
